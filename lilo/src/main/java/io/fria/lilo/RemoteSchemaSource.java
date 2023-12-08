@@ -120,9 +120,15 @@ public final class RemoteSchemaSource extends SchemaSource {
     final List<GraphQLError> errors = graphQLResult.getErrors();
 
     if (errors != null && !errors.isEmpty()) {
-      throw new LiloSourceDataFetcherException(errors);
+      final Map<String, Object> data = graphQLResult.getData();
+      if (data != null && data.values().stream().noneMatch(Objects::isNull)) {
+        LOG.error("GraphQL validation failed, but there is still data. Soft-failing. Total errors: {}\nErorrs:",
+          errors.size());
+        errors.forEach(graphQLError -> LOG.error("Error message: '{}', {}", graphQLError.getMessage(), graphQLError));
+      } else {
+        throw new LiloSourceDataFetcherException(errors);
+      }
     }
-
     return ((Map<String, Object>) graphQLResult.getData()).values().iterator().next();
   }
 
